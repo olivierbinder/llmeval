@@ -1,5 +1,5 @@
+# %% IMPORTS -----
 import logging
-from pathlib import Path
 from statistics import mean
 
 import logfire
@@ -14,6 +14,14 @@ from ragas.metrics import (
 )
 from ragas.run_config import RunConfig
 
+from utils.config import (
+    CASES_PATH,
+    DETAILS_CSV,
+    REPORTS_DIR,
+    SEARCH_K,
+    SUMMARY_CSV,
+    SUMMARY_MD,
+)
 from utils.eval_schemas import (
     EvalResult,
     RagasScores,
@@ -24,14 +32,8 @@ from utils.observability import configure_logfire
 from utils.rag_agent import MistralRagasEmbeddings, MistralRagasLLM, RagAgent
 from utils.vector_store import VectorStoreManager
 
-CASES_PATH = Path("eval_cases/nba_eval_cases.yaml")
-REPORTS_DIR = Path("reports")
-DETAILS_CSV = REPORTS_DIR / "ragas_results.csv"
-SUMMARY_CSV = REPORTS_DIR / "ragas_summary_by_category.csv"
-SUMMARY_MD = REPORTS_DIR / "ragas_summary.md"
-SEARCH_K = 5
 
-
+# %% EVALUATION PIPELINE -----
 def main() -> None:
     logging.basicConfig(
         level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
@@ -74,6 +76,7 @@ def main() -> None:
     logging.info("Wrote %s", SUMMARY_MD)
 
 
+# %% RAGAS EVALUATION WITH MISTRAL WRAPPERS -----
 def apply_ragas_scores(results: list[EvalResult]) -> None:
     dataset = Dataset.from_list(
         [
@@ -113,6 +116,7 @@ def apply_ragas_scores(results: list[EvalResult]) -> None:
         )
 
 
+# %% EVAL REPORT -----
 def write_reports(results: list[EvalResult]) -> None:
     details = pd.DataFrame([result.to_flat_dict() for result in results])
     details.to_csv(DETAILS_CSV, index=False)
@@ -134,6 +138,7 @@ def write_reports(results: list[EvalResult]) -> None:
     SUMMARY_MD.write_text(build_markdown_summary(details, summary), encoding="utf-8")
 
 
+# %% MARDKOWN REPORT -----
 def build_markdown_summary(details: pd.DataFrame, summary: pd.DataFrame) -> str:
     overall_scores = {
         column: _mean_without_none(details[column].tolist())

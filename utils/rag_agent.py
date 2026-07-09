@@ -1,3 +1,4 @@
+# %% IMPORTS -----
 import asyncio
 from typing import Any
 
@@ -13,6 +14,7 @@ from ragas.llms import BaseRagasLLM
 from .config import EMBEDDING_MODEL, MISTRAL_API_KEY, MODEL_NAME
 from .eval_schemas import RagAnswer, RetrievedContext
 
+# %% PROMPT -----
 SYSTEM_PROMPT = """Tu es 'NBA Analyst AI', un assistant expert sur la ligue de basketball NBA.
 Ta mission est de répondre aux questions des fans en animant le débat.
 
@@ -30,6 +32,8 @@ QUESTION DU FAN:
 RÉPONSE DE L'ANALYSTE NBA:"""
 
 
+# %% PROMPT -----
+# client.chat
 class RagAgent:
     def __init__(self, model_name: str = MODEL_NAME):
         if not MISTRAL_API_KEY:
@@ -90,6 +94,7 @@ def validate_with_pydantic_ai(answer: RagAnswer) -> RagAnswer:
     return result.output
 
 
+# %% MISTRAL TO JUDGE ANSWERS -----
 class MistralRagasLLM(BaseRagasLLM):
     def __init__(self, model_name: str = MODEL_NAME):
         super().__init__()
@@ -147,6 +152,7 @@ class MistralRagasLLM(BaseRagasLLM):
         return True
 
 
+# %% MISTRAL TO EMBED -----
 class MistralRagasEmbeddings(BaseRagasEmbeddings):
     def __init__(self, model_name: str = EMBEDDING_MODEL):
         super().__init__()

@@ -1,3 +1,4 @@
+# %% IMPORTS -----
 from pathlib import Path
 from typing import Any
 
@@ -5,6 +6,7 @@ import yaml
 from pydantic import BaseModel, Field, field_validator
 
 
+# %% YAML METADATA -----
 class EvalMetadata(BaseModel):
     dataset_name: str
     version: int
@@ -15,6 +17,7 @@ class EvalMetadata(BaseModel):
     notes: list[str] = Field(default_factory=list)
 
 
+# %% YAML CASES -----
 class EvalCase(BaseModel):
     id: str
     category: str
@@ -42,6 +45,7 @@ class EvalCase(BaseModel):
         return value
 
 
+# %% YAML -----
 class EvalCasesFile(BaseModel):
     metadata: EvalMetadata
     cases: list[EvalCase]
@@ -54,6 +58,13 @@ class EvalCasesFile(BaseModel):
         return value
 
 
+# %% YAML LOADER  -----
+def load_eval_cases(path: str | Path) -> EvalCasesFile:
+    raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
+    return EvalCasesFile.model_validate(raw)
+
+
+# %% MISTRAL OUTPUT : RETRIEVED CONTEXT  -----
 class RetrievedContext(BaseModel):
     text: str
     score: float
@@ -71,6 +82,7 @@ class RetrievedContext(BaseModel):
         )
 
 
+# %% MISTRAL OUTPUT  -----
 class RagAnswer(BaseModel):
     question: str
     answer: str
@@ -78,6 +90,7 @@ class RagAnswer(BaseModel):
     model: str
 
 
+# %% RAGAS SCORES  -----
 class RagasScores(BaseModel):
     faithfulness: float | None = None
     answer_relevancy: float | None = None
@@ -85,6 +98,7 @@ class RagasScores(BaseModel):
     context_recall: float | None = None
 
 
+# %% FULL RESULTS  -----
 class EvalResult(BaseModel):
     case: EvalCase
     rag_answer: RagAnswer
@@ -108,8 +122,3 @@ class EvalResult(BaseModel):
             "context_precision": self.scores.context_precision,
             "context_recall": self.scores.context_recall,
         }
-
-
-def load_eval_cases(path: str | Path) -> EvalCasesFile:
-    raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
-    return EvalCasesFile.model_validate(raw)

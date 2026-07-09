@@ -1,6 +1,7 @@
 import logging
 
 import logfire
+from logfire import ConsoleOptions
 
 
 def configure_logfire() -> None:
@@ -9,7 +10,7 @@ def configure_logfire() -> None:
         logfire.configure(
             send_to_logfire=False,
             service_name="nba-rag-evaluation",
-            console={"span_style": "simple"},
+            console=ConsoleOptions(span_style="simple"),
             inspect_arguments=False,
         )
         logfire.instrument_pydantic()
