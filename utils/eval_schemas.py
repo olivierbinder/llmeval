@@ -1,6 +1,6 @@
 # %% IMPORTS -----
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
 from pydantic import BaseModel, Field, field_validator
@@ -10,6 +10,7 @@ from pydantic import BaseModel, Field, field_validator
 class EvalMetadata(BaseModel):
     dataset_name: str
     version: int
+    experiment_name: str = "default_experiment"
     language: str
     source_language: str | None = None
     purpose: str
@@ -58,13 +59,13 @@ class EvalCasesFile(BaseModel):
         return value
 
 
-# %% YAML LOADER  -----
+# %% YAML LOADER -----
 def load_eval_cases(path: str | Path) -> EvalCasesFile:
     raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     return EvalCasesFile.model_validate(raw)
 
 
-# %% MISTRAL OUTPUT : RETRIEVED CONTEXT  -----
+# %% MISTRAL OUTPUT : RETRIEVED CONTEXT -----
 class RetrievedContext(BaseModel):
     text: str
     score: float
@@ -74,6 +75,7 @@ class RetrievedContext(BaseModel):
     @classmethod
     def from_search_result(cls, result: dict[str, Any]) -> "RetrievedContext":
         metadata = result.get("metadata") or {}
+
         return cls(
             text=result.get("text", ""),
             score=float(result.get("score", 0.0)),
@@ -82,15 +84,18 @@ class RetrievedContext(BaseModel):
         )
 
 
-# %% MISTRAL OUTPUT  -----
+# %% MISTRAL OUTPUT -----
 class RagAnswer(BaseModel):
     question: str
     answer: str
     contexts: list[RetrievedContext]
     model: str
+    used_sources: list[str] = Field(default_factory=list)
+    insufficient_context: bool = False
+    confidence: Literal["low", "medium", "high"] = "medium"
 
 
-# %% RAGAS SCORES  -----
+# %% RAGAS SCORES -----
 class RagasScores(BaseModel):
     faithfulness: float | None = None
     answer_relevancy: float | None = None
@@ -98,7 +103,7 @@ class RagasScores(BaseModel):
     context_recall: float | None = None
 
 
-# %% FULL RESULTS  -----
+# %% FULL RESULTS -----
 class EvalResult(BaseModel):
     case: EvalCase
     rag_answer: RagAnswer
@@ -106,6 +111,7 @@ class EvalResult(BaseModel):
 
     def to_flat_dict(self) -> dict[str, Any]:
         contexts = self.rag_answer.contexts
+
         return {
             "case_id": self.case.id,
             "category": self.case.category,
@@ -114,6 +120,9 @@ class EvalResult(BaseModel):
             "question": self.case.question,
             "reference_answer": self.case.reference_answer,
             "answer": self.rag_answer.answer,
+            "used_sources": "; ".join(self.rag_answer.used_sources),
+            "insufficient_context": self.rag_answer.insufficient_context,
+            "confidence": self.rag_answer.confidence,
             "expected_sources": "; ".join(self.case.expected_sources),
             "retrieved_sources": "; ".join(ctx.source for ctx in contexts),
             "retrieved_scores": "; ".join(f"{ctx.score:.2f}" for ctx in contexts),
