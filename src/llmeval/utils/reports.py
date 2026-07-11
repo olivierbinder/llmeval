@@ -1,148 +1,16 @@
 # %% IMPORTS -----
-import logging
-import time
 from pathlib import Path
 from statistics import mean
 
-import logfire
 import pandas as pd
-from datasets import Dataset
-from ragas import evaluate
-from ragas.metrics import (
-    answer_relevancy,
-    context_precision,
-    context_recall,
-    faithfulness,
-)
-from ragas.run_config import RunConfig
 
-from utils.config import (
+from llmeval.utils.config import (
     APP_TITLE,
-    CASES_PATH,
     REPORTS_DIR,
-    SEARCH_K,
 )
-from utils.eval_schemas import (
+from llmeval.utils.eval_schemas import (
     EvalResult,
-    RagasScores,
-    RetrievedContext,
-    load_eval_cases,
 )
-from utils.observability import configure_logfire
-from utils.rag_agent import MistralRagasEmbeddings, MistralRagasLLM, RagAgent
-from utils.vector_store import VectorStoreManager
-
-
-# %% EVALUATION PIPELINE -----
-def main() -> None:
-    started_at = time.perf_counter()
-    logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-    )
-    configure_logfire()
-    REPORTS_DIR.mkdir(exist_ok=True)
-
-    # !!   Load evaluation cases -----
-    with logfire.span("load_eval_cases path={path}", path=str(CASES_PATH)):
-        eval_file = load_eval_cases(CASES_PATH)
-
-    dataset_name = eval_file.metadata.dataset_name
-    dataset_version = eval_file.metadata.version
-    experiment_name = eval_file.metadata.experiment_name
-
-    logging.info(
-        "Loaded %s evaluation cases from dataset %s v%s - experiment %s",
-        len(eval_file.cases),
-        dataset_name,
-        dataset_version,
-        experiment_name,
-    )
-
-    # !!   Generate answers -----
-    vector_store = VectorStoreManager()
-    rag_agent = RagAgent()
-    results: list[EvalResult] = []
-
-    for case in eval_file.cases:
-        with logfire.span(
-            "evaluate_case case_id={case_id}",
-            case_id=case.id,
-            category=case.category,
-            question=case.question,
-        ):
-            search_results = vector_store.search(case.question, k=SEARCH_K)
-            contexts = [
-                RetrievedContext.from_search_result(item) for item in search_results
-            ]
-            # Contraintes sur l'output définie dans RagAgent
-            rag_answer = rag_agent.answer(case.question, contexts)
-            results.append(EvalResult(case=case, rag_answer=rag_answer))
-
-            logging.info(
-                "Generated answer for %s with %s contexts",
-                case.id,
-                len(contexts),
-            )
-
-    # !!   Analyze answers -----
-    # Analyse RAGAS utilisant Pydantic AI
-    with logfire.span("run_ragas case_count={case_count}", case_count=len(results)):
-        apply_ragas_scores(results)
-    execution_seconds = time.perf_counter() - started_at
-    details_csv, report_md = write_reports(
-        results=results,
-        dataset_name=dataset_name,
-        dataset_version=dataset_version,
-        experiment_name=experiment_name,
-        execution_seconds=execution_seconds,
-    )
-
-    logging.info("Wrote %s", details_csv)
-    logging.info("Wrote %s", report_md)
-
-
-# %% RAGAS EVALUATION WITH MISTRAL WRAPPERS -----
-# ragas.evaluate
-def apply_ragas_scores(results: list[EvalResult]) -> None:
-    dataset = Dataset.from_list(
-        [
-            {
-                "user_input": result.case.question,
-                "response": result.rag_answer.answer,
-                "retrieved_contexts": [ctx.text for ctx in result.rag_answer.contexts],
-                "reference": result.case.reference_answer,
-            }
-            for result in results
-        ]
-    )
-
-    ragas_result = evaluate(
-        dataset=dataset,
-        metrics=[faithfulness, answer_relevancy, context_precision, context_recall],
-        llm=MistralRagasLLM(),
-        embeddings=MistralRagasEmbeddings(),
-        raise_exceptions=False,
-        show_progress=True,
-        run_config=RunConfig(  # Gérer les échecs quand ils arrivent
-            max_workers=1,
-            timeout=180,
-            max_retries=6,
-            max_wait=30,
-        ),
-    )
-
-    scores_df = ragas_result.to_pandas()
-
-    for index, result in enumerate(results):
-        row = scores_df.iloc[index].to_dict()
-
-        result.scores = RagasScores(
-            faithfulness=_optional_float(row.get("faithfulness")),
-            answer_relevancy=_optional_float(row.get("answer_relevancy")),
-            context_precision=_optional_float(row.get("context_precision")),
-            context_recall=_optional_float(row.get("context_recall")),
-        )
 
 
 # %% EVAL REPORT -----
@@ -467,7 +335,3 @@ def _summary_to_markdown(summary: pd.DataFrame) -> str:
         )
 
     return "\n".join(lines)
-
-
-if __name__ == "__main__":
-    main()

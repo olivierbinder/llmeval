@@ -7,8 +7,14 @@ from mistralai.models.chat_completion import ChatMessage
 
 # --- Importations depuis vos modules ---
 try:
-    from utils.config import APP_TITLE, MISTRAL_API_KEY, MODEL_NAME, NAME, SEARCH_K
-    from utils.vector_store import VectorStoreManager
+    from llmeval.utils.config import (
+        APP_TITLE,
+        MISTRAL_API_KEY,
+        MODEL_NAME,
+        NAME,
+        SEARCH_K,
+    )
+    from llmeval.utils.vector_store import VectorStoreManager
 except ImportError as e:
     st.error(
         f"Erreur d'importation: {e}. Vérifiez la structure de vos dossiers et les fichiers dans 'utils'."

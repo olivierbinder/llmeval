@@ -2,7 +2,7 @@
 import asyncio
 import threading
 import time
-from typing import Any, Literal
+from typing import Any, Literal, cast
 
 import logfire
 from langchain_core.outputs import Generation, LLMResult
@@ -14,8 +14,8 @@ from pydantic_ai.providers.mistral import MistralProvider
 from ragas.embeddings import BaseRagasEmbeddings
 from ragas.llms import BaseRagasLLM
 
-from .config import EMBEDDING_MODEL, MISTRAL_API_KEY, MODEL_NAME
-from .eval_schemas import RagAnswer, RetrievedContext
+from llmeval.utils.config import EMBEDDING_MODEL, MISTRAL_API_KEY, MODEL_NAME
+from llmeval.utils.eval_schemas import RagAnswer, RetrievedContext
 
 # %% PROMPTS -----
 SYSTEM_PROMPT = """Tu es NBA Analyst AI, un assistant spécialisé sur la NBA.
@@ -147,12 +147,15 @@ class RagAgent:
             ),
         )
 
-    def answer(self, question: str, contexts: list[RetrievedContext]) -> RagAnswer:
+    def answer(
+        self, case_id: str, question: str, contexts: list[RetrievedContext]
+    ) -> RagAnswer:
         context_str = self._format_contexts(contexts)
         prompt = USER_PROMPT.format(context_str=context_str, question=question)
 
         with logfire.span(
-            "llm_answer question={question}",
+            "rag_agent_answer case_id={case_id}",
+            case_id=case_id,
             question=question,
             model=self.model_name,
             context_count=len(contexts),
@@ -160,8 +163,11 @@ class RagAgent:
         ):
             result = self.agent.run_sync(prompt)
 
+        structured_output = cast(StructuredRagOutput, result.output)
+
         structured_answer = self._normalize_structured_answer(
-            output=result.output,
+            case_id=case_id,
+            output=structured_output,
             contexts=contexts,
         )
 
@@ -189,6 +195,7 @@ class RagAgent:
 
     @staticmethod
     def _normalize_structured_answer(
+        case_id: str,
         output: StructuredRagOutput,
         contexts: list[RetrievedContext],
     ) -> StructuredRagOutput:
@@ -244,8 +251,14 @@ class MistralRagasLLM(BaseRagasLLM):
             if stop:
                 request_kwargs["stop"] = stop
 
-            MISTRAL_RAGAS_RATE_LIMITER.wait()
-            response = self.client.chat.complete(**request_kwargs)
+            with logfire.span(
+                "ragas_llm_call",
+                model=self.model_name,
+                api_type="chat/completions",
+                prompt_chars=len(prompt_text),
+            ):
+                MISTRAL_RAGAS_RATE_LIMITER.wait()
+                response = self.client.chat.complete(**request_kwargs)
 
             text = ""
             if response.choices:
@@ -297,11 +310,17 @@ class MistralRagasEmbeddings(BaseRagasEmbeddings):
         if not texts:
             return []
 
-        MISTRAL_RAGAS_RATE_LIMITER.wait()
-        response = self.client.embeddings.create(
+        with logfire.span(
+            "ragas_embedding_call",
             model=self.model_name,
-            inputs=texts,
-        )
+            api_type="embeddings",
+            text_count=len(texts),
+        ):
+            MISTRAL_RAGAS_RATE_LIMITER.wait()
+            response = self.client.embeddings.create(
+                model=self.model_name,
+                inputs=texts,
+            )
 
         return [item.embedding for item in response.data]
 
