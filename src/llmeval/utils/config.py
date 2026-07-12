@@ -43,6 +43,81 @@ EMBEDDING_BATCH_SIZE = 32
 # %% SEARCH -----
 SEARCH_K = 5
 RETRIEVAL_STRATEGY = "faiss"
+SQL_FALLBACK_TO_FAISS = True
+SQL_ROUTE_KEYWORDS = [
+    "meilleur",
+    "meilleurs",
+    "top",
+    "classement",
+    "plus grand",
+    "plus haut",
+    "plus faible",
+    "combien",
+    "moyenne",
+    "total",
+    "totaux",
+    "pourcentage",
+    "ratio",
+    "compare",
+    "comparaison",
+]
+SQL_ROUTE_METRICS = [
+    "pts",
+    "points",
+    "fgm",
+    "fga",
+    "fg%",
+    "3pa",
+    "3p%",
+    "3 points",
+    "trois points",
+    "three_p_pct",
+    "ftm",
+    "fta",
+    "ft%",
+    "lancers francs",
+    "oreb",
+    "dreb",
+    "reb",
+    "rebonds",
+    "passes decisives",
+    "passes décisives",
+    "assists",
+    "ast",
+    "stl",
+    "interceptions",
+    "blk",
+    "contres",
+    "tov",
+    "turnovers",
+    "pf",
+    "fautes personnelles",
+    "fp",
+    "fantasy points",
+    "dd2",
+    "double-double",
+    "td3",
+    "triple-double",
+    "+/-",
+    "plus-minus",
+    "offrtg",
+    "defrtg",
+    "netrtg",
+    "ast%",
+    "ast/to",
+    "ast ratio",
+    "oreb%",
+    "dreb%",
+    "reb%",
+    "to ratio",
+    "efg%",
+    "ts%",
+    "usg%",
+    "pace",
+    "pie",
+    "poss",
+    "possessions",
+]
 INDEX_VERSION = "faiss_v1"
 
 # %% EVALUATION -----
@@ -52,7 +127,7 @@ RAGAS_ANSWER_RELEVANCY_STRICTNESS = 3
 
 # %% DATABASE -----
 DATABASE_DIR = "database"
-DATABASE_FILE = os.path.join(DATABASE_DIR, "interactions.db")
+DATABASE_FILE = "database/nba.db"
 DATABASE_URL = f"sqlite:///{DATABASE_FILE}"
 
 # %% APPLICATION -----

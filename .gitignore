@@ -14,5 +14,6 @@ wheels/
 *.DS_Store
 *.idx
 *.pkl
+*.db
 
 /src_new/
