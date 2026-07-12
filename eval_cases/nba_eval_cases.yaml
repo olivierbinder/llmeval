@@ -1,7 +1,7 @@
 metadata:
   dataset_name: nba_rag_eval_baseline
-  version: 5
-  experiment_name: pydantic_ai_constrained_rag_observability
+  version: 6
+  experiment_name: pydantic_evals_refactor
   language: fr
   source_language: en
   purpose: >

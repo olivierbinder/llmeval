@@ -3,7 +3,27 @@ from pathlib import Path
 from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field, field_validator
+from pydantic import (
+    AliasChoices,
+    BaseModel,
+    ConfigDict,
+    Field,
+    PrivateAttr,
+    field_validator,
+)
+
+
+# %% COMMON TYPES -----
+ExpectedBehavior = Literal[
+    "answer_from_context",
+    "synthesize_multiple_contexts",
+    "answer_from_noisy_question",
+    "compute_from_structured_data",
+    "refuse_or_qualify_missing_data",
+]
+
+Confidence = Literal["low", "medium", "high"]
+RetrievalStrategy = Literal["faiss", "sql", "hybrid", "langchain"]
 
 
 # %% YAML METADATA -----
@@ -26,11 +46,19 @@ class EvalCase(BaseModel):
     language: str
     question: str
     reference_answer: str
-    expected_behavior: str
+    expected_behavior: ExpectedBehavior
     expected_sources: list[str]
     evidence_notes: str
 
-    @field_validator("question", "reference_answer", "evidence_notes")
+    @field_validator(
+        "id",
+        "category",
+        "source_type",
+        "language",
+        "question",
+        "reference_answer",
+        "evidence_notes",
+    )
     @classmethod
     def text_must_not_be_empty(cls, value: str) -> str:
         value = value.strip()
@@ -46,7 +74,7 @@ class EvalCase(BaseModel):
         return value
 
 
-# %% YAML -----
+# %% YAML FILE -----
 class EvalCasesFile(BaseModel):
     metadata: EvalMetadata
     cases: list[EvalCase]
@@ -59,13 +87,78 @@ class EvalCasesFile(BaseModel):
         return value
 
 
-# %% YAML LOADER -----
 def load_eval_cases(path: str | Path) -> EvalCasesFile:
     raw = yaml.safe_load(Path(path).read_text(encoding="utf-8"))
     return EvalCasesFile.model_validate(raw)
 
 
-# %% MISTRAL OUTPUT : RETRIEVED CONTEXT -----
+# %% PYDANTIC EVALS INPUTS AND METADATA -----
+class RagEvalInput(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    id_question: str = Field(
+        validation_alias=AliasChoices("id_question", "case_id"),
+    )
+    question: str
+
+    @property
+    def case_id(self) -> str:
+        return self.id_question
+
+    @field_validator("id_question", "question")
+    @classmethod
+    def text_must_not_be_empty(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("text field must not be empty")
+        return value
+
+
+class RagExpectedOutput(BaseModel):
+    answer: str
+    expected_sources: list[str]
+    expected_behavior: ExpectedBehavior
+
+    @classmethod
+    def from_eval_case(cls, case: EvalCase) -> "RagExpectedOutput":
+        return cls(
+            answer=case.reference_answer,
+            expected_sources=case.expected_sources,
+            expected_behavior=case.expected_behavior,
+        )
+
+    @field_validator("answer")
+    @classmethod
+    def answer_must_not_be_empty(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("answer must not be empty")
+        return value
+
+    @field_validator("expected_sources")
+    @classmethod
+    def sources_must_not_be_empty(cls, value: list[str]) -> list[str]:
+        if not value:
+            raise ValueError("expected_sources must contain at least one source")
+        return value
+
+
+class RagEvalMetadata(BaseModel):
+    category: str
+    source_type: str
+    language: str
+    evidence_notes: str
+
+    @field_validator("category", "source_type", "language", "evidence_notes")
+    @classmethod
+    def text_must_not_be_empty(cls, value: str) -> str:
+        value = value.strip()
+        if not value:
+            raise ValueError("text field must not be empty")
+        return value
+
+
+# %% RETRIEVED CONTEXT -----
 class RetrievedContext(BaseModel):
     text: str
     score: float
@@ -84,7 +177,25 @@ class RetrievedContext(BaseModel):
         )
 
 
-# %% MISTRAL OUTPUT -----
+# %% RAG OUTPUT -----
+class RetrievalStats(BaseModel):
+    seconds: float = 0.0
+    context_count: int = 0
+    top_score: float | None = None
+    mean_score: float | None = None
+    total_chars: int = 0
+    source_count: int = 0
+
+
+class GenerationStats(BaseModel):
+    seconds: float = 0.0
+    input_tokens: int = 0
+    output_tokens: int = 0
+    total_tokens: int = 0
+    request_count: int = 0
+    answer_chars: int = 0
+
+
 class RagAnswer(BaseModel):
     question: str
     answer: str
@@ -92,42 +203,33 @@ class RagAnswer(BaseModel):
     model: str
     used_sources: list[str] = Field(default_factory=list)
     insufficient_context: bool = False
-    confidence: Literal["low", "medium", "high"] = "medium"
+    confidence: Confidence = "medium"
+    retrieval: RetrievalStats = Field(default_factory=RetrievalStats)
+    generation: GenerationStats = Field(default_factory=GenerationStats)
+
+    def to_visible(self) -> "RagAnswerVisible":
+        return RagAnswerVisible.from_answer(self)
 
 
-# %% RAGAS SCORES -----
-class RagasScores(BaseModel):
-    faithfulness: float | None = None
-    answer_relevancy: float | None = None
-    context_precision: float | None = None
-    context_recall: float | None = None
+class RagAnswerVisible(BaseModel):
+    answer: str
+    used_sources: list[str] = Field(default_factory=list)
+    insufficient_context: bool = False
+    confidence: Confidence = "medium"
 
+    _full_answer: RagAnswer | None = PrivateAttr(default=None)
 
-# %% FULL RESULTS -----
-class EvalResult(BaseModel):
-    case: EvalCase
-    rag_answer: RagAnswer
-    scores: RagasScores = Field(default_factory=RagasScores)
+    @classmethod
+    def from_answer(cls, answer: RagAnswer) -> "RagAnswerVisible":
+        visible = cls(
+            answer=answer.answer,
+            used_sources=answer.used_sources,
+            insufficient_context=answer.insufficient_context,
+            confidence=answer.confidence,
+        )
+        visible._full_answer = answer
+        return visible
 
-    def to_flat_dict(self) -> dict[str, Any]:
-        contexts = self.rag_answer.contexts
-
-        return {
-            "case_id": self.case.id,
-            "category": self.case.category,
-            "source_type": self.case.source_type,
-            "language": self.case.language,
-            "question": self.case.question,
-            "reference_answer": self.case.reference_answer,
-            "answer": self.rag_answer.answer,
-            "used_sources": "; ".join(self.rag_answer.used_sources),
-            "insufficient_context": self.rag_answer.insufficient_context,
-            "confidence": self.rag_answer.confidence,
-            "expected_sources": "; ".join(self.case.expected_sources),
-            "retrieved_sources": "; ".join(ctx.source for ctx in contexts),
-            "retrieved_scores": "; ".join(f"{ctx.score:.2f}" for ctx in contexts),
-            "faithfulness": self.scores.faithfulness,
-            "answer_relevancy": self.scores.answer_relevancy,
-            "context_precision": self.scores.context_precision,
-            "context_recall": self.scores.context_recall,
-        }
+    @property
+    def full_answer(self) -> RagAnswer | None:
+        return self._full_answer

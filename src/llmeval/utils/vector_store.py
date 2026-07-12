@@ -6,8 +6,8 @@ from typing import Any, Dict, List, Optional
 
 import faiss
 import numpy as np
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_core.documents import Document
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from mistralai.client import Mistral
 
 from .config import (

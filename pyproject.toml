@@ -14,26 +14,25 @@ dependencies = [
     "pypdf2>=3.0.1",
     "python-docx>=1.1.2",
     "pyyaml>=6.0.3",
-
     # Indexing and RAG
     "faiss-cpu>=1.10.0",
     "langchain>=0.3.23",
     "mistralai>=1.0.0",
-
+    "langchain-community>=0.4.1,<0.4.2",
     # Agents, observability and evaluation
-    "logfire[system-metrics]>=4.37.0",
-    "pydantic>=2.13.4<3",
-    "pydantic-ai[mistral]>=2.6.0",
+    "logfire[datasets,system-metrics]>=4.37.0",
+    "pydantic>=2.13.4,<3",
+    "pydantic-ai[mistral]>=2.9.0,<3",
+    "pydantic-evals>=2.9.0,<3",
     "ragas>=0.4,<0.5",
-
     # App
     "requests>=2.32.3",
     "streamlit>=1.44.1",
     "streamlit-feedback>=0.1.4",
-
     # Utilities
     "python-dotenv>=1.1.0",
     "tqdm>=4.68.4",
+    "ipykernel>=7.3.0",
 ]
 
 [dependency-groups]
@@ -47,4 +46,4 @@ requires = ["uv_build>=0.11.28,<0.12"]
 build-backend = "uv_build"
 
 [project.scripts]
-evaluate = "llmeval.scripts.evaluate_ragas:main"
+evaluate = "llmeval.scripts.evaluate:main"
