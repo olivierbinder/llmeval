@@ -1,140 +1,40 @@
-# Assistant RAG avec Mistral
+# llmeval
 
-Ce projet implémente un assistant virtuel basé sur le modèle Mistral, utilisant la technique de Retrieval-Augmented Generation (RAG) pour fournir des réponses précises et contextuelles à partir d'une base de connaissances personnalisée.
+`llmeval` est un prototype d'évaluation d'un assistant NBA basé sur un système RAG.
 
-## Fonctionnalités
+Le projet construit une base de connaissances à partir de documents NBA, interroge ces données avec un agent LLM, puis mesure la qualité des réponses sur un jeu de questions de référence.
 
-- 🔍 **Recherche sémantique** avec FAISS pour trouver les documents pertinents
-- 🤖 **Génération de réponses** avec les modèles Mistral (Small ou Large)
-- ⚙️ **Paramètres personnalisables** (modèle, nombre de documents, score minimum)
+## Vue d'ensemble
 
-## Prérequis
+Le pipeline couvre quatre étapes principales :
 
-- Python 3.9+
-- Clé API Mistral (obtenue sur [console.mistral.ai](https://console.mistral.ai/))
+1. Charger des sources NBA, notamment des PDFs, fichiers texte, CSV, DOCX et classeurs Excel.
+2. Indexer les contenus textuels dans un index vectoriel FAISS avec des embeddings Mistral.
+3. Répondre à des questions en français via un agent RAG, avec une stratégie hybride possible : recherche vectorielle et outil SQL pour les questions quantitatives.
+4. Évaluer les réponses avec `pydantic-evals`, RAGAS et Logfire, puis générer des rapports Markdown et CSV.
 
-## Installation
+## Données manipulées
 
-1. **Cloner le dépôt**
+Le projet travaille principalement sur :
 
-```bash
-git clone <url-du-repo>
-cd <nom-du-repo>
-```
+- des discussions Reddit NBA transformées en documents interrogeables ;
+- un fichier Excel de statistiques NBA chargé dans une base SQLite ;
+- des cas d'évaluation manuels décrivant les réponses attendues.
 
-2. **Créer un environnement virtuel**
+## Objectif
 
-```bash
-# Création de l'environnement virtuel
-python -m venv venv
+L'objectif est de comparer et améliorer la capacité d'un assistant NBA à :
 
-# Activation de l'environnement virtuel
-# Sur Windows
-venv\Scripts\activate
-# Sur macOS/Linux
-source venv/bin/activate
-```
+- retrouver les bons contextes ;
+- répondre de manière concise et sourcée ;
+- traiter des questions qualitatives issues de documents ;
+- traiter des questions quantitatives à partir de données structurées ;
+- suivre les métriques de qualité, coût, latence et usage des modèles.
 
-3. **Installer les dépendances**
+## Principaux dossiers
 
-```bash
-pip install -r requirements.txt
-```
-
-4. **Configurer la clé API**
-
-Créez un fichier `.env` à la racine du projet avec le contenu suivant :
-
-```python
-MISTRAL_API_KEY=votre_clé_api_mistral
-```
-
-## Structure du projet
-
-```markdown
-.
-├── MistralChat.py          # Application Streamlit principale
-├── indexer.py              # Script pour indexer les documents
-├── inputs/                 # Dossier pour les documents sources
-├── vector_db/              # Dossier pour l'index FAISS et les chunks
-├── database/               # Base de données SQLite pour les interactions
-└── utils/                  # Modules utilitaires
-    ├── config.py           # Configuration de l'application
-    ├── database.py         # Gestion de la base de données
-    └── vector_store.py     # Gestion de l'index vectoriel
-
-```
-
-## Utilisation
-
-### 1. Ajouter des documents
-
-Placez vos documents dans le dossier `inputs/`. Les formats supportés sont :
-
-- PDF
-- TXT
-- DOCX
-- CSV
-- JSON
-
-Vous pouvez organiser vos documents dans des sous-dossiers pour une meilleure organisation.
-
-### 2. Indexer les documents
-
-Exécutez le script d'indexation pour traiter les documents et créer l'index FAISS :
-
-```bash
-python indexer.py
-```
-
-Ce script va :
-
-1. Charger les documents depuis le dossier `inputs/`
-2. Découper les documents en chunks
-3. Générer des embeddings avec Mistral
-4. Créer un index FAISS pour la recherche sémantique
-5. Sauvegarder l'index et les chunks dans le dossier `vector_db/`
-
-### 3. Lancer l'application
-
-```bash
-streamlit run MistralChat.py
-```
-
-L'application sera accessible à l'adresse http://localhost:8501 dans votre navigateur.
-
-## Modules principaux
-
-### `utils/vector_store.py`
-
-Gère l'index vectoriel FAISS et la recherche sémantique :
-
-- Chargement et découpage des documents
-- Génération des embeddings avec Mistral
-- Création et interrogation de l'index FAISS
-
-### `utils/query_classifier.py`
-
-Détermine si une requête nécessite une recherche RAG :
-
-- Analyse des mots-clés
-- Classification avec le modèle Mistral
-- Détection des questions spécifiques vs générales
-
-### `utils/database.py`
-
-Gère la base de données SQLite pour les interactions :
-
-- Enregistrement des questions et réponses
-- Stockage des feedbacks utilisateurs
-- Récupération des statistiques
-
-## Personnalisation
-
-Vous pouvez personnaliser l'application en modifiant les paramètres dans `utils/config.py` :
-
-- Modèles Mistral utilisés
-- Taille des chunks et chevauchement
-- Nombre de documents par défaut
-- Nom de la commune ou organisation
+- `src/llmeval/` : code du pipeline, de l'agent, de l'indexation, de l'ingestion SQL et des rapports.
+- `eval_cases/` : jeux de questions d'évaluation.
+- `database/` : base SQLite et documentation utile à l'agent SQL.
+- `reports/` : rapports produits par les runs d'évaluation.
 

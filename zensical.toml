@@ -1,0 +1,27 @@
+[project]
+site_name = "Évaluation RAG NBA"
+site_description = "Support de soutenance : système RAG, préparation des données et évaluation."
+site_author = "Olivier"
+docs_dir = "docs"
+site_dir = "site"
+extra_css = [
+  "stylesheets/presentation.css"
+]
+
+nav = [
+  {"01. Contexte" = "index.md"},
+  {"02. Données" = "01_preparation_donnees.md"},
+  {"03. Pipeline RAG" = "02_pipeline_rag.md"},
+  {"04. Évaluation" = "03_evaluation_ragas_logfire.md"},
+  {"05. Résultats" = "04_resultats.md"}
+]
+
+[project.theme]
+features = [
+  "navigation.tabs",
+  "navigation.sections",
+  "navigation.path",
+  "toc.follow",
+  "content.code.copy"
+]
+language = "fr"

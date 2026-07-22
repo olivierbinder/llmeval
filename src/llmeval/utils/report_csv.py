@@ -28,6 +28,7 @@ def build_report_dataframe(
     report: EvaluationReport[RagEvalInput, ReportOutput, RagEvalMetadata],
 ) -> pd.DataFrame:
     dataset = eval_file.metadata
+    case_order = {case.id: index for index, case in enumerate(eval_file.cases, start=1)}
     rows: list[dict[str, Any]] = []
 
     for case in report.cases:
@@ -49,6 +50,12 @@ def build_report_dataframe(
                 "status": "evaluated",
                 "answer": _output_answer(case.output),
                 "model": full_output.model if full_output else None,
+                "retrieval_strategy": full_output.retrieval_strategy
+                if full_output
+                else None,
+                "sql_error_reason": full_output.sql_error_reason
+                if full_output
+                else None,
                 "used_sources": _join(visible_output.used_sources)
                 if visible_output
                 else None,
@@ -105,6 +112,8 @@ def build_report_dataframe(
                 "status": "task_failed",
                 "answer": None,
                 "model": None,
+                "retrieval_strategy": None,
+                "sql_error_reason": None,
                 "used_sources": None,
                 "retrieved_sources": None,
                 "retrieved_scores": None,
@@ -127,7 +136,7 @@ def build_report_dataframe(
 
         rows.append(row)
 
-    return pd.DataFrame(rows)
+    return _sort_report_dataframe(pd.DataFrame(rows), case_order)
 
 
 # %% ROW HELPERS -----
@@ -149,6 +158,7 @@ def _base_row(
         "dataset_version": dataset_version,
         "experiment_name": experiment_name,
         "id_question": inputs.id_question,
+        "case_order": inputs.case_order,
         "case_name": case_name,
         "category": metadata.category if metadata else None,
         "source_type": metadata.source_type if metadata else None,
@@ -237,6 +247,8 @@ def _failure_metric_values() -> dict[str, None]:
         "retrieval_total_chars",
         "retrieved_source_count",
         "generation_seconds",
+        "generation_wait_seconds",
+        "generation_api_seconds",
         "answer_input_tokens",
         "answer_output_tokens",
         "answer_total_tokens",
@@ -259,6 +271,7 @@ def _failure_metric_values() -> dict[str, None]:
         "wait_seconds",
         "api_seconds",
         "request_count",
+        "embedding_request_count",
         "input_tokens",
         "output_tokens",
         "total_tokens",
@@ -267,3 +280,33 @@ def _failure_metric_values() -> dict[str, None]:
     values = {name: None for name in metric_names}
     values.update({f"{prefix}_{suffix}": None for prefix in prefixes for suffix in suffixes})
     return values
+
+
+def _sort_report_dataframe(
+    details: pd.DataFrame,
+    case_order: dict[str, int],
+) -> pd.DataFrame:
+    if details.empty:
+        return details
+
+    details = details.copy()
+    details["case_order"] = details.apply(
+        lambda row: _case_order_value(row, case_order),
+        axis=1,
+    )
+    return details.sort_values(
+        by=["case_order", "id_question"],
+        kind="stable",
+    ).reset_index(drop=True)
+
+
+def _case_order_value(row: pd.Series, case_order: dict[str, int]) -> int:
+    try:
+        value = row.get("case_order")
+        if value is not None and not pd.isna(value):
+            return int(value)
+    except (TypeError, ValueError):
+        pass
+
+    id_question = str(row.get("id_question") or "")
+    return case_order.get(id_question, len(case_order) + 1)

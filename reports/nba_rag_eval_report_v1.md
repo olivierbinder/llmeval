@@ -1,44 +1,75 @@
-# Evaluation RAGAS - phase 1
+# Evaluation RAGAS NBA Analyst AI
+
+- **Jeu de questions** : `nba_rag_eval_10_short_answers`
+- **Version** : `v1`
+- **Experience** : `with_sql_strategy`
+- **Duree d'execution** : `8min 14s`
+- **Cas evalues** : `10`
+- **Task failures** : `0`
+- **Evaluator failures** : `0`
 
 ## Scores moyens
 
-| Metrique | Score moyen |
-|---|---:|
-| faithfulness | 0.762 |
-| answer_relevancy | 0.673 |
-| context_precision | 0.661 |
-| context_recall | 0.660 |
+| Metrique | Score moyen | Couverture |
+|---|---:|---:|
+| `faithfulness` | 0.875 | 10/10 |
+| `answer_relevancy` | 0.825 | 10/10 |
+| `context_precision` | 0.762 | 10/10 |
+| `context_recall` | 0.742 | 10/10 |
 
 ## Scores par categorie
 
-| Categorie | Faithfulness | Answer relevancy | Context precision | Context recall | Cas |
+| Categorie | Cas | Faithfulness | Relevancy | Precision | Recall |
 |---|---:|---:|---:|---:|---:|
-| historical_analysis | 0.636 | 0.876 | 1.000 | 0.500 | 1 |
-| historical_qa | 0.393 | 0.799 | 0.804 | 1.000 | 1 |
-| qualitative_comparison | 0.875 | 0.835 | 0.250 | 0.600 | 1 |
-| qualitative_complex | 0.958 | 0.845 | 1.000 | 1.000 | 1 |
-| qualitative_noisy | 0.800 | 0.806 | 1.000 | 1.000 | 1 |
-| qualitative_simple | 0.876 | 0.828 | 0.875 | 0.750 | 2 |
-| quantitative_excel | 1.000 | 0.455 | 0.000 | 0.000 | 2 |
-| quantitative_limit | 0.200 | 0.000 | 0.806 | 1.000 | 1 |
+| historical_analysis | 1 | 1.000 | 0.830 | 0.250 | 0.000 |
+| historical_qa | 1 | 1.000 | 0.969 | 0.950 | 0.667 |
+| qualitative_comparison | 1 | 0.500 | 0.851 | 0.000 | 0.000 |
+| qualitative_complex | 1 | 1.000 | 0.943 | 1.000 | 1.000 |
+| qualitative_noisy | 1 | 1.000 | 0.917 | 1.000 | 1.000 |
+| qualitative_simple | 2 | 0.875 | 0.913 | 1.000 | 0.875 |
+| quantitative_excel | 2 | 1.000 | 0.956 | 1.000 | 1.000 |
+| quantitative_limit | 1 | 0.500 | 0.000 | 0.417 | 1.000 |
 
-## Cas evalues
+## Synthese des cas
 
-| Cas | Categorie | Sources attendues | Sources retrouvees |
-|---|---|---|---|
-| Q01 | qualitative_simple | Reddit 1.pdf | Reddit 1.pdf; Reddit 1.pdf; Reddit 1.pdf; Reddit 1.pdf; Reddit 2.pdf |
-| Q02 | qualitative_simple | Reddit 1.pdf | Reddit 1.pdf; Reddit 1.pdf; Reddit 1.pdf; Reddit 1.pdf; Reddit 1.pdf |
-| Q03 | qualitative_comparison | Reddit 1.pdf | Reddit 1.pdf; Reddit 1.pdf; Reddit 1.pdf; Reddit 1.pdf; Reddit 1.pdf |
-| Q04 | qualitative_complex | Reddit 2.pdf | Reddit 2.pdf; Reddit 2.pdf; Reddit 2.pdf; Reddit 2.pdf; Reddit 2.pdf |
-| Q05 | qualitative_noisy | Reddit 2.pdf | Reddit 2.pdf; Reddit 2.pdf; Reddit 2.pdf; Reddit 2.pdf; Reddit 2.pdf |
-| Q06 | historical_analysis | Reddit 3.pdf | Reddit 3.pdf; Reddit 3.pdf; Reddit 3.pdf; Reddit 3.pdf; Reddit 3.pdf |
-| Q07 | historical_qa | Reddit 4.pdf | Reddit 4.pdf; Reddit 4.pdf; Reddit 4.pdf; Reddit 4.pdf; Reddit 4.pdf |
-| Q08 | quantitative_excel | regular NBA.xlsx (Feuille: Données NBA) | regular NBA.xlsx (Feuille: Dictionnaire des données); regular NBA.xlsx (Feuille: Analyse Vide); regular NBA.xlsx (Feuille: Analyse); regular NBA.xlsx (Feuille: Dictionnaire des données); Reddit 3.pdf |
-| Q09 | quantitative_excel | regular NBA.xlsx (Feuille: Données NBA) | regular NBA.xlsx (Feuille: Analyse); regular NBA.xlsx (Feuille: Analyse Vide); regular NBA.xlsx (Feuille: Dictionnaire des données); regular NBA.xlsx (Feuille: Dictionnaire des données); regular NBA.xlsx (Feuille: Analyse Vide) |
-| Q10 | quantitative_limit | regular NBA.xlsx (Feuille: Données NBA); regular NBA.xlsx (Feuille: Dictionnaire des données) | regular NBA.xlsx (Feuille: Dictionnaire des données); regular NBA.xlsx (Feuille: Dictionnaire des données); regular NBA.xlsx (Feuille: Analyse); regular NBA.xlsx (Feuille: Analyse Vide); regular NBA.xlsx (Feuille: Dictionnaire des données) |
+| Cas | Statut | Strategie | Categorie | Faithfulness | Relevancy | Precision | Recall | Confiance | Contextes | Erreurs evaluator |
+|---|---|---|---|---:|---:|---:|---:|---|---:|---:|
+| Q01 | evaluated | faiss | qualitative_simple | 1.000 | 0.875 | 1.000 | 1.000 | high | 5 | 0 |
+| Q02 | evaluated | faiss | qualitative_simple | 0.750 | 0.951 | 1.000 | 0.750 | high | 5 | 0 |
+| Q03 | evaluated | faiss | qualitative_comparison | 0.500 | 0.851 | 0.000 | 0.000 | medium | 5 | 0 |
+| Q04 | evaluated | faiss | qualitative_complex | 1.000 | 0.943 | 1.000 | 1.000 | high | 5 | 0 |
+| Q05 | evaluated | faiss | qualitative_noisy | 1.000 | 0.917 | 1.000 | 1.000 | medium | 5 | 0 |
+| Q06 | evaluated | faiss | historical_analysis | 1.000 | 0.830 | 0.250 | 0.000 | high | 5 | 0 |
+| Q07 | evaluated | faiss | historical_qa | 1.000 | 0.969 | 0.950 | 0.667 | high | 5 | 0 |
+| Q08 | evaluated | sql | quantitative_excel | 1.000 | 0.964 | 1.000 | 1.000 | high | 1 | 0 |
+| Q09 | evaluated | sql | quantitative_excel | 1.000 | 0.947 | 1.000 | 1.000 | high | 1 | 0 |
+| Q10 | evaluated | sql_fallback_faiss | quantitative_limit | 0.500 | 0.000 | 0.417 | 1.000 | low | 5 | 0 |
 
-## Lecture rapide
+## Performance
 
-- Les cas qualitatifs testent la capacite du RAG texte a retrouver et synthetiser les PDF Reddit.
-- Les cas quantitatifs testent les limites de l'Excel indexe comme texte.
-- Le cas Q10 doit rester prudent, car les donnees actuelles ne contiennent pas de split sur les cinq derniers matchs.
+| Etape | Temps total | Attente | API | Appels LLM | Tokens entree | Tokens sortie |
+|---|---:|---:|---:|---:|---:|---:|
+| Reponses agent | 21.59s | n/a | 21.24s | 24 | 45896 | 1668 |
+| RAGAS total | 469.85s | 344.37s | 124.58s | 102 | 134909 | 10822 |
+
+| Metrique RAGAS | Temps/cas | Attente/cas | API/cas | Appels juge/cas | Appels embedding/cas | Tokens entree/cas | Tokens sortie/cas |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| Faithfulness | 6.45s | 3.55s | 2.89s | 2 | 0 | 2975.9 | 356.5 |
+| Answer relevancy | 18.67s | 15.84s | 2.79s | 3 | 2 | 1464.6 | 101.6 |
+| Context precision | 17.21s | 12.14s | 5.04s | 4.2 | 0 | 5904.6 | 413 |
+| Context recall | 4.65s | 2.90s | 1.73s | 1 | 0 | 3145.8 | 211.1 |
+
+Nombre d'appels API
+
+| Cas | Reponse agent | Faithfulness | Relevancy | Precision | Recall |
+|---|---:|---:|---:|---:|---:|
+| Q01 | 1 | 2 | 5 | 5 | 1 |
+| Q02 | 1 | 2 | 5 | 5 | 1 |
+| Q03 | 1 | 2 | 5 | 5 | 1 |
+| Q04 | 1 | 2 | 5 | 5 | 1 |
+| Q05 | 1 | 2 | 5 | 5 | 1 |
+| Q06 | 1 | 2 | 5 | 5 | 1 |
+| Q07 | 1 | 2 | 5 | 5 | 1 |
+| Q08 | 5 | 2 | 5 | 1 | 1 |
+| Q09 | 5 | 2 | 5 | 1 | 1 |
+| Q10 | 7 | 2 | 5 | 5 | 1 |

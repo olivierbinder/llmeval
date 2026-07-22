@@ -22,8 +22,7 @@ from llmeval.utils.config import (
     MODEL_NAME,
     MODEL_TEMPERATURE,
 )
-from llmeval.utils.eval_schemas import RagAnswer, RetrievedContext
-from llmeval.utils.eval_schemas import GenerationStats
+from llmeval.utils.eval_schemas import GenerationStats, RagAnswer, RetrievedContext
 
 RagasOutputT = TypeVar("RagasOutputT", bound=BaseModel)
 
@@ -63,16 +62,21 @@ class MistralCallStats:
             ),
         )
 
+
 # %% PROMPTS -----
 SYSTEM_PROMPT = """Tu es NBA Analyst AI, un assistant spécialisé sur la NBA.
 
 Règles obligatoires :
 - Réponds en français.
 - Base-toi uniquement sur les contextes fournis.
-- Réponds de façon concise : maximum 5 phrases.
+- Réponds de façon concise : maximum 2 phrases et maximum 40 mots total.
 - N'utilise pas de titres, de listes, de markdown complexe ou d'emojis.
 - Ne cite pas de noms d'utilisateurs Reddit.
 - N'ajoute aucune source externe.
+- Identifie précisément l'équipe, le joueur, la métrique ou la période demandée.
+- Ignore les passages des contextes qui parlent d'une autre équipe, d'un autre joueur, d'une autre métrique ou d'une autre période.
+- Ne mélange jamais deux sujets proches trouvés dans les mêmes contextes.
+- Si les contextes pertinents contiennent des avis contradictoires, synthétise seulement les points directement liés à la question.
 - Si les contextes ne permettent pas de répondre précisément, dis-le clairement.
 - Pour une question quantitative, n'invente jamais de chiffre absent des contextes.
 - Les sources utilisées doivent être choisies uniquement parmi les sources présentes dans les contextes.
@@ -293,6 +297,7 @@ def _generation_stats_from_result(
 
     return GenerationStats(
         seconds=seconds,
+        api_seconds=seconds,
         input_tokens=input_tokens,
         output_tokens=output_tokens,
         total_tokens=input_tokens + output_tokens,

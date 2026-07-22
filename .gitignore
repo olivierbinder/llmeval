@@ -8,6 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+.env
 *.pdf
 *.xlsx
 *.csv
@@ -16,4 +17,8 @@ wheels/
 *.pkl
 *.db
 
-/src_new/
+site
+.uv-cache
+.logfire
+.cache
+.vscode

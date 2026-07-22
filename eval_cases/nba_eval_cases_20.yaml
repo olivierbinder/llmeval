@@ -1,0 +1,290 @@
+metadata:
+  dataset_name: nba_rag_eval_expanded_short_answers
+  version: 8
+  experiment_name: with_sql_strategy_short_answers
+  language: fr
+  source_language: en
+  purpose: >
+    Cas d'évaluation manuels pour le prototype RAG NBA. Le jeu reprend la
+    structure du dataset précédent, double le nombre de questions et utilise
+    des réponses de référence volontairement courtes pour l'évaluation.
+  source_scope:
+    - inputs/Reddit 1.pdf
+    - inputs/Reddit 2.pdf
+    - inputs/Reddit 3.pdf
+    - inputs/Reddit 4.pdf
+    - inputs/regular NBA.xlsx
+  notes:
+    - Le dossier inputs n'est pas présent dans ce checkout ; les cas sont ancrés dans vector_db et database.
+    - La répartition par catégorie double celle de nba_eval_cases_old.yaml.
+    - Les réponses de référence sont limitées à 30 mots maximum.
+
+cases:
+  - id: Q01
+    category: qualitative_simple
+    source_type: reddit
+    language: fr
+    question: Pourquoi le Magic d'Orlando est-il présenté comme prometteur malgré ses limites ?
+    reference_answer: "Orlando est prometteur grâce au duo Paolo-Franz, compétitif défensivement et offensivement, mais limité par le spacing, les shooteurs et l'absence d'un vrai meneur."
+    expected_behavior: answer_from_context
+    expected_sources:
+      - Reddit 1.pdf
+    evidence_notes: >
+      Reddit 1 décrit Paolo Banchero et Franz Wagner comme un duo d'ailiers
+      adapté aux playoffs, tout en soulignant le manque de spacing, de shooteurs
+      et de création.
+
+  - id: Q02
+    category: qualitative_simple
+    source_type: reddit
+    language: fr
+    question: Qu'est-ce qui rend Julius Randle plus convaincant dans ces playoffs selon les commentaires ?
+    reference_answer: "Randle est décrit comme plus fiable : bully ball efficace, meilleures lectures face aux trappes, défense plus engagée et tir extérieur en progrès."
+    expected_behavior: answer_from_context
+    expected_sources:
+      - Reddit 1.pdf
+    evidence_notes: >
+      Les commentaires de Reddit 1 mentionnent son jeu physique, ses lectures
+      contre les prises à deux, son engagement défensif et son tir à trois
+      points.
+
+  - id: Q03
+    category: qualitative_simple
+    source_type: reddit
+    language: fr
+    question: Que disent les fans sur Cade Cunningham dans la discussion playoff ?
+    reference_answer: "Cade impressionne comme scoreur et leader, mais les commentaires pointent ses pertes de balle et le besoin d'un second créateur fiable."
+    expected_behavior: answer_from_context
+    expected_sources:
+      - Reddit 1.pdf
+    evidence_notes: >
+      Reddit 1 présente Cade comme un joueur capable de porter Detroit, mais
+      note ses pertes de balle et l'absence d'une autre option de création.
+
+  - id: Q04
+    category: qualitative_simple
+    source_type: reddit
+    language: fr
+    question: Pourquoi les Timberwolves impressionnent-ils certains fans dans le fil Reddit ?
+    reference_answer: "Minnesota surprend par son plafond élevé, l'essor d'Anthony Edwards, une attaque plus collective et sa capacité à exposer le manque de profondeur des Lakers."
+    expected_behavior: answer_from_context
+    expected_sources:
+      - Reddit 1.pdf
+    evidence_notes: >
+      Reddit 1 cite le plafond des Wolves, la progression d'Anthony Edwards, une
+      attaque moins dépendante de l'iso et les limites de profondeur des Lakers.
+
+  - id: Q05
+    category: qualitative_comparison
+    source_type: reddit
+    language: fr
+    question: Quelles équipes reviennent le plus souvent comme surprises positives en playoffs, et pour quelles raisons ?
+    reference_answer: "Les équipes citées sont surtout Orlando, Indiana, Minnesota et Detroit, pour leur jeune talent, leur attaque, leur équilibre ou leur progression en playoffs."
+    expected_behavior: synthesize_multiple_contexts
+    expected_sources:
+      - Reddit 1.pdf
+    evidence_notes: >
+      Reddit 1 regroupe des commentaires sur le Magic, les Pacers, les Wolves et
+      les Pistons, avec des justifications différentes pour chaque équipe.
+
+  - id: Q06
+    category: qualitative_comparison
+    source_type: reddit
+    language: fr
+    question: Compare la perception d'Orlando et d'Indiana dans la discussion sur les équipes impressionnantes.
+    reference_answer: "Orlando est vu comme prometteur mais incomplet ; Indiana comme dangereux maintenant, grâce à une attaque déjà capable de battre presque tout le monde."
+    expected_behavior: synthesize_multiple_contexts
+    expected_sources:
+      - Reddit 1.pdf
+    evidence_notes: >
+      Reddit 1 oppose l'optimisme prospectif autour du Magic au crédit plus
+      immédiat accordé à l'attaque d'Indiana et au travail de Carlisle.
+
+  - id: Q07
+    category: qualitative_complex
+    source_type: reddit
+    language: fr
+    question: Pourquoi certains fans pensent-ils qu'une finale Thunder-Pacers serait injustement vendue comme ennuyeuse ?
+    reference_answer: "Les fans accusent surtout le marketing NBA, l'obsession des superstars et grands marchés, et la difficulté des publics occasionnels à reconnaître OKC-Indiana."
+    expected_behavior: synthesize_multiple_contexts
+    expected_sources:
+      - Reddit 2.pdf
+    evidence_notes: >
+      Reddit 2 relie le récit négatif aux médias, aux audiences, aux petits
+      marchés, aux superstars moins installées et à la méconnaissance du public
+      occasionnel.
+
+  - id: Q08
+    category: qualitative_complex
+    source_type: reddit
+    language: fr
+    question: Pourquoi les Pacers peuvent-ils être sous-estimés par le public national selon Reddit ?
+    reference_answer: "Parce que les Pacers manquaient d'exposition nationale et que beaucoup découvrent tard leur jeu rapide, leurs comebacks et leur qualité collective."
+    expected_behavior: synthesize_multiple_contexts
+    expected_sources:
+      - Reddit 2.pdf
+    evidence_notes: >
+      Reddit 2 mentionne le faible nombre de matchs nationaux des Pacers, les
+      réactions de fans découvrant leur style et l'importance de leur rythme.
+
+  - id: Q09
+    category: qualitative_noisy
+    source_type: reddit
+    language: fr
+    question: Franchement, OKC-Indiana en Finales, c'est vraiment le truc soporifique que certains annoncent ?
+    reference_answer: "Non : le fil anticipe une série compétitive, rapide et animée, même si les discussions en ligne pourraient devenir très toxiques."
+    expected_behavior: answer_from_noisy_question
+    expected_sources:
+      - Reddit 2.pdf
+    evidence_notes: >
+      La question est volontairement familière. Reddit 2 contient des attentes
+      positives sur le niveau de la série, mais aussi des avertissements sur la
+      toxicité en ligne.
+
+  - id: Q10
+    category: qualitative_noisy
+    source_type: reddit
+    language: fr
+    question: C'est quoi le délire des fans avec SGA, ils le trouvent nul ou juste pénible à regarder ?
+    reference_answer: "Le délire vise surtout son foul baiting : certains respectent le niveau de SGA mais trouvent son style frustrant à regarder."
+    expected_behavior: answer_from_noisy_question
+    expected_sources:
+      - Reddit 2.pdf
+    evidence_notes: >
+      Reddit 2 contient plusieurs commentaires qui reconnaissent le talent de
+      Shai Gilgeous-Alexander tout en critiquant les fautes provoquées et les
+      chutes exagérées.
+
+  - id: Q11
+    category: historical_analysis
+    source_type: reddit
+    language: fr
+    question: Sur quoi repose l'argument statistique en faveur de Reggie Miller en playoffs ?
+    reference_answer: "Le post valorise son rTS ajusté à l'époque, son prime 1991-2002, sa longévité et ses séries gagnées sans coéquipier Hall of Fame."
+    expected_behavior: answer_from_context
+    expected_sources:
+      - Reddit 3.pdf
+    evidence_notes: >
+      Reddit 3 présente Reggie comme la première option la plus efficace selon le
+      relative true shooting, avec des précisions sur son prime et son contexte
+      d'équipe.
+
+  - id: Q12
+    category: historical_analysis
+    source_type: reddit
+    language: fr
+    question: Quelles limites les commentaires apportent-ils à l'argument sur l'efficacité de Reggie Miller ?
+    reference_answer: "Les critiques disent que son volume, sa création individuelle limitée et ses faibles sélections All-NBA empêchent d'en faire un scoreur supérieur aux légendes."
+    expected_behavior: answer_from_context
+    expected_sources:
+      - Reddit 3.pdf
+    evidence_notes: >
+      Reddit 3 nuance l'efficacité de Reggie par son volume, son rôle off-ball,
+      son manque relatif de création et ses distinctions individuelles limitées.
+
+  - id: Q13
+    category: historical_qa
+    source_type: reddit
+    language: fr
+    question: Une équipe NBA a-t-elle déjà eu l'avantage du terrain seulement à partir des Finales ?
+    reference_answer: "Probablement aucune. Le fil dit que ce scénario n'est jamais arrivé en NBA moderne ; Miami 2023 échoue car Denver avait l'avantage."
+    expected_behavior: answer_from_context
+    expected_sources:
+      - Reddit 4.pdf
+    evidence_notes: >
+      Reddit 4 écarte l'exemple du Heat 2023 parce que Denver avait l'avantage
+      du terrain en Finales et conclut que le cas n'a pas eu lieu.
+
+  - id: Q14
+    category: historical_qa
+    source_type: reddit
+    language: fr
+    question: Quelle équipe est citée comme exemple célèbre de finaliste sans aucun avantage du terrain ?
+    reference_answer: "Les Rockets 1995 sont cités : champions sans avantage du terrain dans aucune série, après avoir battu les quatre meilleurs bilans."
+    expected_behavior: answer_from_context
+    expected_sources:
+      - Reddit 4.pdf
+    evidence_notes: >
+      Reddit 4 cite Houston 1995 comme cas célèbre d'équipe titrée sans avantage
+      du terrain, distinct du scénario où l'avantage arrive seulement en Finales.
+
+  - id: Q15
+    category: quantitative_excel
+    source_type: excel
+    language: fr
+    question: Parmi les joueurs avec au moins 300 tirs à trois points tentés, qui a le meilleur pourcentage ?
+    reference_answer: "Zach LaVine, Sacramento, avec 44,6 % à trois points sur 533 tentatives."
+    expected_behavior: compute_from_structured_data
+    expected_sources:
+      - "regular NBA.xlsx (Feuille: Données NBA)"
+    evidence_notes: >
+      La requête SQL filtre three_pa >= 300, trie par three_p_pct décroissant et
+      place Zach LaVine en tête.
+
+  - id: Q16
+    category: quantitative_excel
+    source_type: excel
+    language: fr
+    question: Quel joueur possède le plus grand total de rebonds dans la table des joueurs ?
+    reference_answer: "Ivica Zubac, Clippers, avec 1008 rebonds."
+    expected_behavior: compute_from_structured_data
+    expected_sources:
+      - "regular NBA.xlsx (Feuille: Données NBA)"
+    evidence_notes: >
+      La colonne reb de la table players classe Ivica Zubac premier, devant
+      Domantas Sabonis et Karl-Anthony Towns.
+
+  - id: Q17
+    category: quantitative_excel
+    source_type: excel
+    language: fr
+    question: Quel joueur a marqué le plus de points dans les données de saison ?
+    reference_answer: "Shai Gilgeous-Alexander, Oklahoma City, avec 2485 points."
+    expected_behavior: compute_from_structured_data
+    expected_sources:
+      - "regular NBA.xlsx (Feuille: Données NBA)"
+      - "regular NBA.xlsx (Feuille: Equipe)"
+    evidence_notes: >
+      Le classement décroissant sur pts place Shai Gilgeous-Alexander en tête ;
+      la table teams donne le nom complet Oklahoma City Thunder.
+
+  - id: Q18
+    category: quantitative_excel
+    source_type: excel
+    language: fr
+    question: Quel joueur totalise le plus de passes décisives dans la base ?
+    reference_answer: "Trae Young, Atlanta, avec 882 passes décisives."
+    expected_behavior: compute_from_structured_data
+    expected_sources:
+      - "regular NBA.xlsx (Feuille: Données NBA)"
+    evidence_notes: >
+      La colonne ast de players place Trae Young premier avec 882 passes
+      décisives, devant Nikola Jokic et James Harden.
+
+  - id: Q19
+    category: quantitative_limit
+    source_type: excel
+    language: fr
+    question: Qui a le meilleur pourcentage à trois points sur ses cinq derniers matchs ?
+    reference_answer: "Impossible à établir : les sources indexées donnent des agrégats de saison, pas les cinq derniers matchs."
+    expected_behavior: refuse_or_qualify_missing_data
+    expected_sources:
+      - "regular NBA.xlsx (Feuille: Données NBA)"
+      - "regular NBA.xlsx (Feuille: Dictionnaire des données)"
+    evidence_notes: >
+      Le fichier Excel et la base contiennent des statistiques agrégées de
+      saison, sans lignes match par match ni fenêtre des cinq derniers matchs.
+
+  - id: Q20
+    category: quantitative_limit
+    source_type: excel
+    language: fr
+    question: Quel joueur a le meilleur net rating uniquement sur les matchs à domicile ?
+    reference_answer: "Impossible de répondre fiablement : la base ne contient pas de splits domicile/extérieur ni de logs match par match."
+    expected_behavior: refuse_or_qualify_missing_data
+    expected_sources:
+      - "regular NBA.xlsx (Feuille: Données NBA)"
+      - "regular NBA.xlsx (Feuille: Dictionnaire des données)"
+    evidence_notes: >
+      La métrique netrtg existe bien, mais seulement en agrégat global. Aucun
+      champ ne permet d'isoler les matchs à domicile.

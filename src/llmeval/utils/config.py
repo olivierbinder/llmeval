@@ -42,7 +42,7 @@ EMBEDDING_BATCH_SIZE = 32
 
 # %% SEARCH -----
 SEARCH_K = 5
-RETRIEVAL_STRATEGY = "faiss"
+RETRIEVAL_STRATEGY = "hybrid"  # faiss
 SQL_FALLBACK_TO_FAISS = True
 SQL_ROUTE_KEYWORDS = [
     "meilleur",

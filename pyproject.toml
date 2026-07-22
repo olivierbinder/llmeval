@@ -34,6 +34,8 @@ dependencies = [
     "tqdm>=4.68.4",
     "ipykernel>=7.3.0",
     "langchain-mistralai>=1.1.6",
+    "matplotlib>=3.11.0",
+    "zensical>=0.0.51",
 ]
 
 [dependency-groups]

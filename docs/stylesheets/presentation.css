@@ -1,0 +1,48 @@
+.lead-callout {
+  padding: 1rem 1.25rem;
+  border-left: 0.28rem solid #2563eb;
+  background: rgba(37, 99, 235, 0.10);
+  border-radius: 0.25rem;
+  font-size: 1.08rem;
+  line-height: 1.5;
+}
+
+.md-typeset h1 {
+  font-weight: 750;
+}
+
+.md-typeset h2 {
+  margin-top: 1.6rem;
+}
+
+.md-typeset table {
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.md-typeset table code {
+  font-size: 0.68rem;
+}
+
+.md-typeset table.table-first-24 th:first-child,
+.md-typeset table.table-first-24 td:first-child,
+.md-typeset .table-first-24 table th:first-child,
+.md-typeset .table-first-24 table td:first-child,
+.md-typeset #livrables-au-sein-du-repo + table th:first-child,
+.md-typeset #livrables-au-sein-du-repo + table td:first-child {
+  width: 24%;
+  white-space: normal;
+}
+
+.md-typeset table.table-first-24 th:nth-child(2),
+.md-typeset table.table-first-24 td:nth-child(2),
+.md-typeset .table-first-24 table th:nth-child(2),
+.md-typeset .table-first-24 table td:nth-child(2),
+.md-typeset #livrables-au-sein-du-repo + table th:nth-child(2),
+.md-typeset #livrables-au-sein-du-repo + table td:nth-child(2) {
+  width: 76%;
+}
+
+.md-typeset li {
+  margin-bottom: 0.25rem;
+}

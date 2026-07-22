@@ -23,7 +23,13 @@ ExpectedBehavior = Literal[
 ]
 
 Confidence = Literal["low", "medium", "high"]
-RetrievalStrategy = Literal["faiss", "sql", "hybrid", "langchain"]
+RetrievalStrategy = Literal[
+    "faiss",
+    "sql",
+    "sql_fallback_faiss",
+    "hybrid",
+    "langchain",
+]
 
 
 # %% YAML METADATA -----
@@ -100,6 +106,7 @@ class RagEvalInput(BaseModel):
         validation_alias=AliasChoices("id_question", "case_id"),
     )
     question: str
+    case_order: int | None = None
 
     @property
     def case_id(self) -> str:
@@ -189,6 +196,8 @@ class RetrievalStats(BaseModel):
 
 class GenerationStats(BaseModel):
     seconds: float = 0.0
+    wait_seconds: float = 0.0
+    api_seconds: float = 0.0
     input_tokens: int = 0
     output_tokens: int = 0
     total_tokens: int = 0
@@ -201,6 +210,8 @@ class RagAnswer(BaseModel):
     answer: str
     contexts: list[RetrievedContext]
     model: str
+    retrieval_strategy: RetrievalStrategy = "faiss"
+    sql_error_reason: str | None = None
     used_sources: list[str] = Field(default_factory=list)
     insufficient_context: bool = False
     confidence: Confidence = "medium"
