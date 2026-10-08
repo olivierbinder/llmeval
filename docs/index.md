@@ -11,6 +11,11 @@ Construire un prototype capable de répondre à des questions sur une saison de 
 - Montrer comment l’évaluation est orchestrée et observée.
 - Présenter le repo Git.
 
+## Démo en ligne
+
+[![Application Streamlit](https://img.shields.io/badge/Application-Streamlit%20Cloud-FF4B4B?style=for-the-badge&logo=streamlit&logoColor=white)](https://llmeval-nba.streamlit.app/)
+[![Code source](https://img.shields.io/badge/Code-GitHub-181717?style=for-the-badge&logo=github&logoColor=white)](https://github.com/olivierbinder/llmeval)
+
 ## Vue générale
 
 ```mermaid
