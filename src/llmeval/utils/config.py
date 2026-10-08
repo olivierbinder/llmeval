@@ -21,8 +21,11 @@ if not LOGFIRE_API_KEY:
 
 # %% MISTRAL MODELS -----
 MISTRAL_API_BASE_URL = "https://api.mistral.ai/v1"
-EMBEDDING_MODEL = "mistral-embed"
-MODEL_NAME = "mistral-small-latest"  # mistral-large-latest
+# Surchargeables par variable d'environnement / secret Streamlit (MODEL_NAME,
+# EMBEDDING_MODEL) : permet de basculer l'app sur un modèle autorisé par le
+# compte sans redéployer le code.
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "mistral-embed")
+MODEL_NAME = os.getenv("MODEL_NAME", "mistral-small-latest")
 MODEL_TEMPERATURE = 0.1
 MODEL_MAX_TOKENS = 1200
 

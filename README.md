@@ -57,9 +57,15 @@ Streamlit Cloud) :
 | Clé | Rôle |
 | --- | --- |
 | `MISTRAL_API_KEY` | obligatoire (embeddings + génération) |
+| `MODEL_NAME` | modèle de génération, défaut `mistral-small-latest` (ex. `ministral-8b-latest` si ton compte n'a pas de quota sur le modèle par défaut) |
+| `EMBEDDING_MODEL` | modèle d'embeddings, défaut `mistral-embed` |
 | `APP_PASSWORD` | mot de passe d'accès à l'app |
 | `QUESTION_LIMIT` | quota de questions par session (défaut `20`) |
 | `LOGFIRE_API_KEY` / `LOGFIRE_TOKEN` | optionnel, active les traces Logfire |
+
+Pour vérifier le quota d'un modèle avant de le choisir, l'API renvoie dans ses
+en-têtes `x-ratelimit-limit-req-minute` : une valeur `0` signifie que le compte
+n'est pas autorisé à utiliser ce modèle (`429 rate_limited`, code `1300`).
 
 ### Déploiement Streamlit Community Cloud
 

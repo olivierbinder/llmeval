@@ -237,6 +237,19 @@ def render_history(show_contexts: bool, show_sql: bool) -> None:
 
 
 # %% QUESTION HANDLING -----
+def _error_message(error: Exception) -> str:
+    text = str(error)
+    if "429" in text or "rate_limit" in text.lower():
+        return (
+            f"⚠️ Mistral refuse la requête (429 rate limit) pour le modèle "
+            f"`{MODEL_NAME}`. Vérifie sur console.mistral.ai → *Limits* que ce "
+            "modèle a bien un quota autorisé supérieur à 0, ou définis un autre "
+            "`MODEL_NAME` dans les secrets de l'app."
+        )
+
+    return f"⚠️ Erreur : {error}"
+
+
 def ask(question: str, service: AnswerService, show_contexts: bool, show_sql: bool) -> None:
     question = question.strip()
     if not question:
@@ -262,7 +275,7 @@ def ask(question: str, service: AnswerService, show_contexts: bool, show_sql: bo
                 answer = service.answer(question)
         except Exception as error:  # noqa: BLE001 - on affiche l'erreur à l'utilisateur
             logging.exception("Échec de la génération de la réponse")
-            message = f"⚠️ Erreur : {error}"
+            message = _error_message(error)
             st.markdown(message)
             st.session_state.messages.append({"role": "assistant", "content": message})
             return
