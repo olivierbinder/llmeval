@@ -83,6 +83,15 @@ de la racine. L'index FAISS (`vector_db/`), les chunks et la base
 d'ingestion. Si le log de build montre malgré tout un `uv sync`, retirer
 `uv.lock` du dépôt (`git rm --cached uv.lock`) et redéployer.
 
+## Documentation
+
+La documentation technique (données, pipeline RAG, évaluation, résultats) est
+publiée sur GitHub Pages : <https://olivierbinder.github.io/llmeval/>
+
+```bash
+uv run zensical serve   # prévisualisation locale
+```
+
 ## Tests et qualité
 
 ```bash

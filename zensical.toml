@@ -2,6 +2,7 @@
 site_name = "Évaluation RAG NBA"
 site_description = "Support de soutenance : système RAG, préparation des données et évaluation."
 site_author = "Olivier"
+site_url = "https://olivierbinder.github.io/llmeval"
 docs_dir = "docs"
 site_dir = "site"
 extra_css = [
