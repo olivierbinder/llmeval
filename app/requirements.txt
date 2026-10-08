@@ -1,0 +1,25 @@
+# Dépendances de l'app Streamlit (déployée sur Streamlit Community Cloud).
+#
+# Ce fichier est volontairement minimal : il ne contient que ce qu'importe
+# app/streamlit_app.py -> llmeval.utils.answer_service.
+# Les dépendances d'ingestion (easyocr, torch, PyMuPDF, pandas, openpyxl) et
+# d'évaluation (ragas, pydantic-evals, zensical) ne sont PAS nécessaires ici :
+# l'index FAISS et la base SQLite sont livrés préconstruits dans le dépôt.
+#
+# Il est placé dans le dossier de l'entrypoint pour être prioritaire sur le
+# uv.lock de la racine (qui résout torch + wheels CUDA, incompatible avec les
+# limites de Community Cloud).
+#
+# Versions alignées sur l'environnement local validé (Python 3.12).
+
+streamlit==1.59.1
+mistralai==2.6.0
+pydantic==2.13.4
+pydantic-ai-slim[mistral]==2.9.0
+langchain-community==0.4.1
+langchain-mistralai==1.1.6
+faiss-cpu==1.14.3
+numpy==2.5.1
+python-dotenv==1.2.2
+PyYAML==6.0.3
+logfire[system-metrics]==4.37.0

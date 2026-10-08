@@ -22,3 +22,14 @@ site
 .logfire
 .cache
 .vscode
+
+# Secrets Streamlit (ne jamais committer)
+.streamlit/secrets.toml
+*.streamlit/secrets.toml
+
+# Artefacts d'exécution nécessaires à l'app déployée (~1,9 Mo) :
+# l'index FAISS, les chunks et la base SQLite sont livrés préconstruits pour
+# que Streamlit Community Cloud démarre sans étape d'ingestion.
+!vector_db/faiss_index.idx
+!vector_db/document_chunks.pkl
+!database/nba.db

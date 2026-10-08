@@ -34,7 +34,53 @@ L'objectif est de comparer et améliorer la capacité d'un assistant NBA à :
 ## Principaux dossiers
 
 - `src/llmeval/` : code du pipeline, de l'agent, de l'indexation, de l'ingestion SQL et des rapports.
+- `app/` : application Streamlit (assistant NBA + consultation des rapports).
 - `eval_cases/` : jeux de questions d'évaluation.
 - `database/` : base SQLite et documentation utile à l'agent SQL.
 - `reports/` : rapports produits par les runs d'évaluation.
+- `tests/` : tests du routage SQL/FAISS partagé entre l'évaluation et l'application.
+
+## Application Streamlit
+
+```bash
+uv run streamlit run app/streamlit_app.py
+```
+
+L'app expose l'assistant NBA (recherche vectorielle FAISS, outil SQL pour les
+questions chiffrées) avec les sources, la stratégie utilisée, les métriques de
+latence/tokens et une seconde vue qui affiche les rapports d'évaluation déjà
+versionnés.
+
+Secrets attendus (`.streamlit/secrets.toml` en local, secrets de l'app sur
+Streamlit Cloud) :
+
+| Clé | Rôle |
+| --- | --- |
+| `MISTRAL_API_KEY` | obligatoire (embeddings + génération) |
+| `APP_PASSWORD` | mot de passe d'accès à l'app |
+| `QUESTION_LIMIT` | quota de questions par session (défaut `20`) |
+| `LOGFIRE_API_KEY` / `LOGFIRE_TOKEN` | optionnel, active les traces Logfire |
+
+### Déploiement Streamlit Community Cloud
+
+1. Pousser le dépôt sur GitHub (repo public).
+2. Sur [share.streamlit.io](https://share.streamlit.io), créer une app avec le
+   fichier principal `app/streamlit_app.py`.
+3. Dans *Advanced settings*, choisir Python 3.12 et coller les secrets ci-dessus.
+4. Déployer.
+
+`app/requirements.txt` est volontairement minimal (pas d'`easyocr`/`torch`, pas
+de `ragas`/`pydantic-evals`) et sert de fichier de dépendances au déploiement :
+il est placé dans le dossier de l'entrypoint, donc prioritaire sur le `uv.lock`
+de la racine. L'index FAISS (`vector_db/`), les chunks et la base
+(`database/nba.db`) sont versionnés (~1,9 Mo) pour que l'app démarre sans étape
+d'ingestion. Si le log de build montre malgré tout un `uv sync`, retirer
+`uv.lock` du dépôt (`git rm --cached uv.lock`) et redéployer.
+
+## Tests et qualité
+
+```bash
+uv run pytest tests -q
+uv run ruff check src app tests
+```
 

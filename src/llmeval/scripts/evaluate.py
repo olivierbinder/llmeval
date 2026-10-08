@@ -1,10 +1,8 @@
 # %% IMPORTS -----
 import logging
 import math
-import re
 import subprocess
 import time
-import unicodedata
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from importlib.metadata import version
@@ -30,6 +28,10 @@ from ragas.metrics.collections import (
 )
 from ragas.metrics.result import MetricResult
 
+from llmeval.utils.answer_service import (
+    AnswerService,
+    answer_with_faiss,
+)
 from llmeval.utils.config import (
     CASES_PATH,
     CHUNK_OVERLAP,
@@ -44,21 +46,14 @@ from llmeval.utils.config import (
     RAGAS_ANSWER_RELEVANCY_STRICTNESS,
     RETRIEVAL_STRATEGY,
     SEARCH_K,
-    SQL_FALLBACK_TO_FAISS,
-    SQL_ROUTE_KEYWORDS,
-    SQL_ROUTE_METRICS,
 )
 from llmeval.utils.eval_schemas import (
     EvalCasesFile,
-    GenerationStats,
     RagAnswer,
     RagAnswerVisible,
     RagEvalInput,
     RagEvalMetadata,
     RagExpectedOutput,
-    RetrievalStats,
-    RetrievalStrategy,
-    RetrievedContext,
     load_eval_cases,
 )
 from llmeval.utils.logfire_datasets import (
@@ -66,24 +61,17 @@ from llmeval.utils.logfire_datasets import (
     push_and_fetch_hosted_dataset,
 )
 from llmeval.utils.observability import configure_logfire
-from llmeval.utils.rag_agent import (
+from llmeval.utils.rag_agent import RagAgent
+from llmeval.utils.ragas_clients import (
     MistralCallStats,
     MistralRagasEmbeddings,
     MistralRagasLLM,
-    RagAgent,
 )
 from llmeval.utils.reports import write_reports
-from llmeval.utils.sql_tool import SqlToolResult, run_sql_question
 from llmeval.utils.vector_store import VectorStoreManager
 
 RagEvalOutput = RagExpectedOutput | RagAnswerVisible | str
 RuntimeRagDataset = Dataset[RagEvalInput, RagEvalOutput, RagEvalMetadata]
-SQL_TABLE_SOURCES = {
-    "players": "regular NBA.xlsx (Feuille: Données NBA)",
-    "teams": "regular NBA.xlsx (Feuille: Equipe)",
-    "features": "regular NBA.xlsx (Feuille: Dictionnaire des données)",
-}
-SQL_TABLES = tuple(SQL_TABLE_SOURCES)
 
 
 @dataclass
@@ -387,27 +375,14 @@ def build_rag_task(
     run_attributes: dict[str, object],
 ):
     def run_rag(inputs: RagEvalInput) -> RagAnswerVisible:
-        # !! Retrieve contexts -----
-        with logfire.span(
-            "search_contexts id_question={id_question}",
-            id_question=inputs.id_question,
-            search_k=SEARCH_K,
-        ):
-            retrieval_started = time.perf_counter()
-            search_results = vector_store.search(inputs.question, k=SEARCH_K)
-            retrieval_seconds = time.perf_counter() - retrieval_started
-            contexts = [
-                RetrievedContext.from_search_result(item) for item in search_results
-            ]
-            retrieval_stats = _retrieval_stats(contexts, retrieval_seconds)
-
-        # !! Generate answer -----
-        full_answer = rag_agent.answer(
-            case_id=inputs.id_question,
+        full_answer = answer_with_faiss(
             question=inputs.question,
-            contexts=contexts,
+            vector_store=vector_store,
+            rag_agent=rag_agent,
+            retrieval_strategy="faiss",
+            search_k=SEARCH_K,
+            case_id=inputs.id_question,
         )
-        full_answer.retrieval = retrieval_stats
 
         # !! Expose task data to Pydantic Evals and Logfire -----
         for name, value in run_attributes.items():
@@ -416,7 +391,7 @@ def build_rag_task(
         set_eval_attribute("case_order", inputs.case_order)
         set_eval_attribute(
             "retrieved_sources",
-            list(dict.fromkeys(context.source for context in contexts)),
+            list(dict.fromkeys(context.source for context in full_answer.contexts)),
         )
         set_eval_attribute("used_sources", full_answer.used_sources)
         set_eval_attribute("insufficient_context", full_answer.insufficient_context)
@@ -438,242 +413,23 @@ def build_hybrid_task(
     rag_agent: RagAgent,
     run_attributes: dict[str, object],
 ):
+    service = AnswerService(vector_store=vector_store, rag_agent=rag_agent)
+
     def run_hybrid(inputs: RagEvalInput) -> RagAnswerVisible:
-        sql_result: SqlToolResult | None = None
-        sql_seconds = 0.0
-
-        if should_try_sql(inputs.question):
-            sql_started = time.perf_counter()
-            with logfire.span(
-                "sql_tool_answer id_question={id_question}",
-                id_question=inputs.id_question,
-            ):
-                sql_result = run_sql_question(inputs.question)
-            sql_seconds = time.perf_counter() - sql_started
-
-            if sql_result.success and sql_result.answer:
-                contexts = _sql_contexts(
-                    question=inputs.question,
-                    sql_result=sql_result,
-                )
-                used_sources = _sql_used_sources(sql_result) or ["database/nba.db"]
-                full_answer = RagAnswer(
-                    question=inputs.question,
-                    answer=sql_result.answer,
-                    contexts=contexts,
-                    model=MODEL_NAME,
-                    retrieval_strategy="sql",
-                    used_sources=used_sources,
-                    insufficient_context=False,
-                    confidence="high",
-                    retrieval=_retrieval_stats(contexts, 0.0),
-                    generation=sql_result.api_stats.model_copy(
-                        update={
-                            "seconds": sql_seconds,
-                            "answer_chars": len(sql_result.answer),
-                        },
-                    ),
-                )
-                _expose_answer_attributes(
-                    inputs=inputs,
-                    answer=full_answer,
-                    run_attributes=run_attributes,
-                )
-                return full_answer.to_visible()
-
-            if not SQL_FALLBACK_TO_FAISS:
-                error_reason = sql_result.error_reason if sql_result else "sql_error"
-                error_message = (
-                    sql_result.error_message
-                    if sql_result
-                    else "SQL tool did not return a result."
-                )
-                used_sources = (
-                    _sql_used_sources(sql_result) if sql_result else []
-                ) or ["database/nba.db"]
-                full_answer = RagAnswer(
-                    question=inputs.question,
-                    answer=(
-                        "Les donnees disponibles ne permettent pas de repondre "
-                        "precisement a cette question."
-                    ),
-                    contexts=[],
-                    model=MODEL_NAME,
-                    retrieval_strategy="sql",
-                    sql_error_reason=error_reason,
-                    used_sources=used_sources,
-                    insufficient_context=True,
-                    confidence="low",
-                    generation=sql_result.api_stats.model_copy(
-                        update={
-                            "seconds": sql_seconds,
-                            "answer_chars": len(error_message or ""),
-                        },
-                    )
-                    if sql_result
-                    else GenerationStats(answer_chars=len(error_message or "")),
-                )
-                _expose_answer_attributes(
-                    inputs=inputs,
-                    answer=full_answer,
-                    run_attributes=run_attributes,
-                )
-                return full_answer.to_visible()
-
-        fallback_strategy = (
-            "sql_fallback_faiss" if sql_result and not sql_result.success else "faiss"
+        full_answer = service.answer(
+            inputs.question,
+            case_id=inputs.id_question,
         )
-        full_answer = _answer_with_faiss(
-            inputs=inputs,
-            vector_store=vector_store,
-            rag_agent=rag_agent,
-            retrieval_strategy=fallback_strategy,
-            sql_error_reason=sql_result.error_reason if sql_result else None,
-        )
-        if sql_result and not sql_result.success:
-            full_answer.generation = _add_sql_attempt_stats(
-                generation=full_answer.generation,
-                sql_result=sql_result,
-                sql_seconds=sql_seconds,
-            )
+
         _expose_answer_attributes(
             inputs=inputs,
             answer=full_answer,
             run_attributes=run_attributes,
         )
+
         return full_answer.to_visible()
 
     return run_hybrid
-
-
-def _add_sql_attempt_stats(
-    generation: GenerationStats,
-    sql_result: SqlToolResult,
-    sql_seconds: float,
-) -> GenerationStats:
-    sql_stats = sql_result.api_stats
-    return generation.model_copy(
-        update={
-            "seconds": generation.seconds + sql_seconds,
-            "wait_seconds": generation.wait_seconds + sql_stats.wait_seconds,
-            "api_seconds": generation.api_seconds + sql_stats.api_seconds,
-            "input_tokens": generation.input_tokens + sql_stats.input_tokens,
-            "output_tokens": generation.output_tokens + sql_stats.output_tokens,
-            "total_tokens": generation.total_tokens + sql_stats.total_tokens,
-            "request_count": generation.request_count + sql_stats.request_count,
-        },
-    )
-
-
-def _answer_with_faiss(
-    inputs: RagEvalInput,
-    vector_store: VectorStoreManager,
-    rag_agent: RagAgent,
-    retrieval_strategy: RetrievalStrategy,
-    sql_error_reason: str | None = None,
-) -> RagAnswer:
-    # !! Retrieve contexts -----
-    with logfire.span(
-        "search_contexts id_question={id_question}",
-        id_question=inputs.id_question,
-        search_k=SEARCH_K,
-        retrieval_strategy=retrieval_strategy,
-        sql_error_reason=sql_error_reason,
-    ):
-        retrieval_started = time.perf_counter()
-        search_results = vector_store.search(inputs.question, k=SEARCH_K)
-        retrieval_seconds = time.perf_counter() - retrieval_started
-        contexts = [
-            RetrievedContext.from_search_result(item) for item in search_results
-        ]
-        retrieval_stats = _retrieval_stats(contexts, retrieval_seconds)
-
-    # !! Generate answer -----
-    full_answer = rag_agent.answer(
-        case_id=inputs.id_question,
-        question=inputs.question,
-        contexts=contexts,
-    )
-    full_answer.retrieval = retrieval_stats
-    full_answer.retrieval_strategy = retrieval_strategy
-    full_answer.sql_error_reason = sql_error_reason
-    return full_answer
-
-
-def _sql_contexts(
-    question: str,
-    sql_result: SqlToolResult,
-) -> list[RetrievedContext]:
-    if not sql_result.sql_evidence:
-        return []
-
-    sources = _sql_used_sources(sql_result)
-    return [
-        RetrievedContext(
-            text=_sql_context_text(
-                question=question,
-                sql_result=sql_result,
-                sources=sources,
-            ),
-            score=1.0,
-            source=_sql_context_source(sources),
-            metadata={"retrieval_type": "sql"},
-        )
-    ]
-
-
-def _sql_context_text(
-    question: str,
-    sql_result: SqlToolResult,
-    sources: list[str],
-) -> str:
-    parts = [f"Question SQL traitee : {question}"]
-    multiple_queries = len(sql_result.sql_evidence) > 1
-
-    for index, evidence in enumerate(sql_result.sql_evidence, start=1):
-        suffix = f" {index}" if multiple_queries else ""
-        parts.extend(
-            [
-                f"Requete SQL executee{suffix} :",
-                evidence.query,
-                f"Resultat SQL{suffix} :",
-                evidence.result,
-            ]
-        )
-
-    if sources:
-        parts.extend(["Sources :", "; ".join(sources)])
-
-    return "\n".join(parts)
-
-
-def _sql_used_sources(sql_result: SqlToolResult) -> list[str]:
-    tables: list[str] = []
-    for evidence in sql_result.sql_evidence:
-        for table in _sql_tables_from_query(evidence.query):
-            if table not in tables:
-                tables.append(table)
-
-    return [SQL_TABLE_SOURCES[table] for table in tables]
-
-
-def _sql_tables_from_query(query: str) -> list[str]:
-    normalized = re.sub(r"[`\"[\]]", " ", query.lower())
-    return [
-        table
-        for table in SQL_TABLES
-        if re.search(rf"\b{re.escape(table)}\b", normalized)
-    ]
-
-
-def _sql_context_source(sources: list[str]) -> str:
-    if len(sources) == 1:
-        return sources[0]
-
-    if sources:
-        return "; ".join(sources)
-
-    return "database/nba.db"
 
 
 def _expose_answer_attributes(
@@ -701,51 +457,6 @@ def _expose_answer_attributes(
         run_attributes=run_attributes,
     )
 
-
-def should_try_sql(question: str) -> bool:
-    normalized = _normalize_for_route(question)
-    keywords = [_normalize_for_route(keyword).strip() for keyword in SQL_ROUTE_KEYWORDS]
-    metrics = [_normalize_for_route(metric).strip() for metric in SQL_ROUTE_METRICS]
-
-    return any(_route_term_matches(normalized, keyword) for keyword in keywords) or any(
-        _route_term_matches(normalized, metric) for metric in metrics
-    )
-
-
-def _normalize_for_route(text: str) -> str:
-    without_accents = "".join(
-        char
-        for char in unicodedata.normalize("NFKD", text.lower())
-        if not unicodedata.combining(char)
-    )
-    return f" {without_accents} "
-
-
-def _route_term_matches(question: str, term: str) -> bool:
-    if not term:
-        return False
-
-    if any(not char.isalnum() for char in term):
-        return term in question
-
-    return re.search(rf"\b{re.escape(term)}\b", question) is not None
-
-
-def _retrieval_stats(
-    contexts: list[RetrievedContext],
-    seconds: float,
-) -> RetrievalStats:
-    scores = [context.score for context in contexts]
-    sources = list(dict.fromkeys(context.source for context in contexts))
-
-    return RetrievalStats(
-        seconds=seconds,
-        context_count=len(contexts),
-        top_score=max(scores) if scores else None,
-        mean_score=sum(scores) / len(scores) if scores else None,
-        total_chars=sum(len(context.text) for context in contexts),
-        source_count=len(sources),
-    )
 
 
 def _record_product_metrics(answer: RagAnswer) -> None:
